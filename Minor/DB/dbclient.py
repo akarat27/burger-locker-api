@@ -21,6 +21,35 @@ def createTable():
             );
         """)
 
+def createTableKey():
+    con = initConnect();
+    with con:
+        con.execute("""
+            CREATE TABLE KEY (
+                encrypted TEXT
+            );
+        """)
+def createKey(input):
+    con = initConnect();
+    sql = 'INSERT INTO KEY ( encrypted) values( \''+input+'\')'
+    data = []
+    with con:
+        con.execute(sql)
+def clearKey():
+    con = initConnect();
+    sql = 'DELETE FROM KEY'
+    with con:
+        con.execute(sql)
+
+def getKey():
+    con = initConnect();
+    sql = 'select encrypted FROM KEY LIMIT 1'
+    with con:
+        cur = con.cursor()
+        cur.execute(sql)
+        rows = cur.fetchall()
+        return rows
+
 def createLocker(input):
     con = initConnect();
     sql = 'INSERT INTO LOCKER ( reserveDate, orderNo, sdmOrder, lockerNo, status) values(?, ?, ? ,? ,?)'
