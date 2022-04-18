@@ -16,42 +16,42 @@ locker_base_url =  "https://mfg-grab-api.minordigital.com" #"http://api-dev.keys
 
 lockerClient = RequestsApi(locker_base_url)
 
-class Messenger(object):
-    def __init__(self):
-        super(Messenger, self).__init__()
-        self.TCP_HOST = "127.0.0.1"  # QtNetwork.QHostAddress.LocalHost
-        self.TCP_SEND_TO_PORT = 7011
-        self.pSocket = None
-        self.listenServer = None
-        self.pSocket = QtNetwork.QTcpSocket()
-        self.pSocket.readyRead.connect(self.slotReadData)
-        self.pSocket.connected.connect(self.on_connected)
-        self.pSocket.error.connect(self.on_error)
+# class Messenger(object):
+#     def __init__(self):
+#         super(Messenger, self).__init__()
+#         self.TCP_HOST = "127.0.0.1"  # QtNetwork.QHostAddress.LocalHost
+#         self.TCP_SEND_TO_PORT = 7011
+#         self.pSocket = None
+#         self.listenServer = None
+#         self.pSocket = QtNetwork.QTcpSocket()
+#         self.pSocket.readyRead.connect(self.slotReadData)
+#         self.pSocket.connected.connect(self.on_connected)
+#         self.pSocket.error.connect(self.on_error)
 
-    def slotSendMessage(self):
-        self.pSocket.connectToHost(self.TCP_HOST, self.TCP_SEND_TO_PORT)
+#     def slotSendMessage(self):
+#         self.pSocket.connectToHost(self.TCP_HOST, self.TCP_SEND_TO_PORT)
 
-    def on_error(self, error):
-        if error == QtNetwork.QAbstractSocket.ConnectionRefusedError:
-            print(
-                'Unable to send data to port: "{}"'.format(
-                    self.TCP_SEND_TO_PORT
-                )
-            )
-            print("trying to reconnect")
-            QtCore.QTimer.singleShot(1000, self.slotSendMessage)
+#     def on_error(self, error):
+#         if error == QtNetwork.QAbstractSocket.ConnectionRefusedError:
+#             print(
+#                 'Unable to send data to port: "{}"'.format(
+#                     self.TCP_SEND_TO_PORT
+#                 )
+#             )
+#             print("trying to reconnect")
+#             QtCore.QTimer.singleShot(1000, self.slotSendMessage)
 
-    def on_connected(self):
-        cmd = "Hi there!"
-        print("Command Sent:", cmd)
-        ucmd = unicode(cmd, "utf-8")
-        self.pSocket.write(ucmd)
-        self.pSocket.flush()
-        self.pSocket.disconnectFromHost()
+#     def on_connected(self):
+#         cmd = "Hi there!"
+#         print("Command Sent:", cmd)
+#         ucmd = unicode(cmd, "utf-8")
+#         self.pSocket.write(ucmd)
+#         self.pSocket.flush()
+#         self.pSocket.disconnectFromHost()
 
-    def slotReadData(self):
-        print("Reading data:", self.pSocket.readAll())
-        # QByteArray data = pSocket->readAll();
+#     def slotReadData(self):
+#         print("Reading data:", self.pSocket.readAll())
+#         # QByteArray data = pSocket->readAll();
 
 
 class Client(QtCore.QObject):
@@ -95,7 +95,6 @@ class Client(QtCore.QObject):
         print(response.text)
 
 
-
 class Server(QtCore.QObject):
     def __init__(self, parent=None):
         QtCore.QObject.__init__(self)
@@ -114,19 +113,19 @@ class Server(QtCore.QObject):
             QtNetwork.QHostAddress.Any, self.TCP_LISTEN_TO_PORT
         ):
             print(
-                "Server is listening on port: {}".format(
+                "TCP Server is listening on port: {}".format(
                     self.TCP_LISTEN_TO_PORT
                 )
             )
         else:
-            print("Server couldn't wake up")
+            print("TCP Server couldn't wake up")
 
 
-class Example(QMainWindow):
+class MainUI(QMainWindow):
     def __init__(self):
-        super(Example, self).__init__()
+        super(MainUI, self).__init__()
 
-        self.setWindowTitle("DeliveryTracker")
+        self.setWindowTitle("DeliveryTracker (Minor version 1.0) Copy right 2022")
         self.resize(300, 100)
         self.setFixedSize(300, 100)
         #self.setGeometry(900, 500, 400, 200)
@@ -248,18 +247,39 @@ class thread_with_exception(threading.Thread):
 ##########################################
 
 if __name__ == "__main__":
-    #main()
-    # stop_threads = False
-    # thread1 = threading.Thread(target=loopForPrint)
-    # thread1.start()
+    
+    #CHECKING THE KEY BEFORE STARTUP
+    key = "TLUKyqJD58LnXv286GeYVwQIHgnbeHUK_Xs9lA93FGA="
+    rows = dbclient.getKey()
+    encryted_uuid = rows[0][0]  #print(rows[0][0])
+    errorToken = ''
+    try:
+        decrypted_uuid = decrypt(bytes.fromhex(encryted_uuid),key).decode()
+        hwid = str(subprocess.check_output('wmic csproduct get uuid')).split('\\r\\n')[1].strip('\\r').strip()
+        if hwid != decrypted_uuid:
+            print(errorToken + 'Key installed is invalid for MINOR')
+            sys.exit()
+        else:
+            pass
+            # print(decrypted_uuid)
+            # print(hwid)
+    except ValueError:
+        errorToken = 'InvalidToken'
+        print(errorToken + '.Key installed is invalid for MINOR')
+        sys.exit()
+    except InvalidToken:
+        errorToken = 'InvalidToken'
+        print(errorToken + '.Key installed is invalid for MINOR')
+        sys.exit()
 
-    t1 = thread_with_exception('Thread 1')
+    #STARTING TREAD
+    t1 = thread_with_exception('Thread PrintJOB') #Thread 1
     t1.start()
 
     app = QApplication(sys.argv)
-    ex = Example()
+    ex = MainUI()
     ex.show()
-    ex.setup()
+    ex.setup() # to start server ,PORT 7011
     app.exec_()
 
 
@@ -272,3 +292,9 @@ if __name__ == "__main__":
     #print(locals())
 
     sys.exit()
+
+#######################################################
+#main()
+    # stop_threads = False
+    # thread1 = threading.Thread(target=loopForPrint)
+    # thread1.start()
