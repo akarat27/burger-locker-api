@@ -1,0 +1,5 @@
+1. Install python-3.8.0-amd64 installer
+2. open CMD 
+3. cd <current folder>
+4. run this command
+   pip install -r requirements.txt
