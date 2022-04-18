@@ -1,9 +1,10 @@
 import base64
 import sys
+import logging
 import json
 from PyQt5 import QtCore, QtGui, QtNetwork
 from PyQt5.QtWidgets import (QApplication, QMessageBox, QGroupBox,QGridLayout,
- QPushButton,QMainWindow,QVBoxLayout,QWidget,QLabel,QFormLayout,QStyleFactory)
+ QPushButton,QMainWindow,QVBoxLayout,QWidget,QLabel,QFormLayout,QStyleFactory,QPlainTextEdit)
 from PyQt5.QtCore import Qt
 from Apps.PrintLocal import *
 import threading
@@ -71,9 +72,13 @@ class Client(QtCore.QObject):
 
     def on_connected(self):
         print("Client Connected Event")
+        # win = globals()['ex'] #ex
+        # win.setProgramStatus("State : Found a new order.")
 
     def on_disconnected(self):
         print("Client Disconnected")
+        # win = globals()['ex'] #ex
+        # win.setProgramStatus("State : Waiting for the next order.")
 
     def on_readyRead(self):
         msg = self.socket.readAll()
@@ -98,7 +103,17 @@ class Client(QtCore.QObject):
         #make locker for request
         response = lockerClient.get('/',verify=False)
         print(response.text)
+        #self.clearLabel()
+        logging.info('send order to locker api')
 
+    def clearLabel(self):
+        win = globals()['ex'] #ex
+        win.setPrinter("Waiting")
+        win.setChannel("N/A")
+        win.setOrder("N/A")
+        win.setSdm("N/A")
+        win.setChannel("N/A")
+        win.setTranTime("N/A")
 
 class Server(QtCore.QObject):
     def __init__(self, parent=None):
@@ -126,18 +141,34 @@ class Server(QtCore.QObject):
             print("TCP Server couldn't wake up")
 
 ############### GUI #################
+class QTextEditLogger(logging.Handler):
+    def __init__(self, parent):
+        super().__init__()
+        self.widget = QPlainTextEdit(parent)
+        self.widget.setReadOnly(True)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.widget.appendPlainText(msg)
 
 class MainUI(QMainWindow):
     def __init__(self):
         super(MainUI, self).__init__()
 
         self.setWindowTitle("DeliveryTracker (Minor version 1.0) Copy right 2022")
-        self.resize(500, 200)
-        self.setFixedSize(500, 200)
+        self.resize(650, 200)
+        self.setFixedSize(650, 200)
         #self.setGeometry(900, 500, 400, 200)
 
         self.mainWidget = QWidget(self)
-
+        # You can format what is printed to text box
+        self.logTextBox = QTextEditLogger(self)
+        #self.logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
+        self.logTextBox.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
+        logging.getLogger().addHandler(self.logTextBox)
+        # You can control the logging level
+        logging.getLogger().setLevel(logging.INFO)
+        
         #modified
         self.createTopLeftGroupBox()
         self.createTopRightGroupBox()
@@ -150,7 +181,7 @@ class MainUI(QMainWindow):
         #self.cw.setLayout(self.formlayout)
         self.mainWidget.setLayout(self.mainLayout)
         self.setCentralWidget(self.mainWidget)
-        self.setProgramStatus("Order is waiting for a new one ")
+        
 
         # self.uiConnect = QPushButton("Connect")
         #
@@ -196,7 +227,7 @@ class MainUI(QMainWindow):
 
         self.widget1 = QWidget()
         self.widget1.setLayout(self.formlayout)
-        self.widget1.setMinimumSize(400,150)
+        self.widget1.setMinimumSize(200,150)
 
         # flatPushButton = QPushButton("Flat Push Button")
         # flatPushButton.setFlat(True)
@@ -213,12 +244,13 @@ class MainUI(QMainWindow):
 
         self.topRightGroupBox = QGroupBox("Status")
 
-        self.programStatus = QPushButton("Running")
+        self.flatPushButton = QPushButton("Export")
         #flatPushButton = QPushButton(self.get_tray_icon(),"loadme")
-        self.programStatus.setFlat(True)
+        #self.flatPushButton.setFlat(True)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.programStatus)
+        layout.addWidget(self.logTextBox.widget)
+        layout.addWidget(self.flatPushButton)
         layout.addStretch(1)
         self.topRightGroupBox.setLayout(layout)   
 
