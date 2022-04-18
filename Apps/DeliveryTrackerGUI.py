@@ -8,6 +8,9 @@ import threading
 import ctypes
 from Minor import configs
 from Minor.http_api import RequestsApi
+from cryptography.fernet import Fernet
+from cryptography.fernet import InvalidToken
+import subprocess
 
 locker_base_url =  "https://mfg-grab-api.minordigital.com" #"http://api-dev.keyspace.tech:3000"
 # github = RequestsApi("https://api.github.com", headers={"Authorization": "token abcdef"})
@@ -245,6 +248,8 @@ class thread_with_exception(threading.Thread):
 ##########################################
 ######## MAIN APPLICATION          #######
 ##########################################
+def decrypt(token: bytes, key: bytes) -> bytes:
+    return Fernet(key).decrypt(token)
 
 if __name__ == "__main__":
     
