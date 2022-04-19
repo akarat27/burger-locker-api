@@ -4,7 +4,8 @@ import logging
 import json
 from PyQt5 import QtCore, QtGui, QtNetwork
 from PyQt5.QtWidgets import (QApplication, QMessageBox, QGroupBox,QGridLayout,
- QPushButton,QMainWindow,QVBoxLayout,QWidget,QLabel,QFormLayout,QStyleFactory,QPlainTextEdit)
+ QPushButton,QMainWindow,QVBoxLayout,QWidget,QLabel,QFormLayout,QStyleFactory,QPlainTextEdit,
+ QFileDialog,)
 from PyQt5.QtCore import Qt
 from Apps.PrintLocal import *
 import threading
@@ -82,29 +83,33 @@ class Client(QtCore.QObject):
 
     def on_readyRead(self):
         msg = self.socket.readAll()
-        print(type(msg), msg.count())
-        print("Client Message:", msg)
+        #print(type(msg), msg.count())
+        #print("Client Message:", msg)
+        logging.info('POS:RECEIVEDATA,'+ ' ' + str(msg.count()) + ' bytes')
         msgByte = msg.data()
         #print(type(msgByte))
         msgStr = msgByte.decode('ascii')
         #print(msgStr)
         capture = json.loads(msgStr)
-        #print(capture)
+        print(capture)
         #print(globals()['ex'])
         #print(dir(globals()['ex']))
-        win = globals()['ex'] #ex
-        win.setPrinter(configs.printer["name"])
-        win.setChannel(capture['channel'])
-        win.setOrder(capture['order'])
-        win.setSdm(capture['sdm'])
-        win.setChannel(capture['channel'])
-        win.setTranTime(capture['datetime'])
+        if capture['channel'] is not None:
+            win = globals()['ex'] #ex
+            win.setPrinter(configs.printer["name"])
+            win.setChannel(capture['channel'])
+            win.setOrder(capture['order'])
+            win.setSdm(capture['sdm'])
+            win.setTranTime(capture['datetime'])
+            logging.info('POS:RECEIVEDATA,'+ ' Channel ' + capture['channel'] + ',' + capture['order'] + ',' + capture['sdm']  )
 
-        #make locker for request
-        response = lockerClient.get('/',verify=False)
-        print(response.text)
-        #self.clearLabel()
-        logging.info('send order to locker api')
+            #make locker for request
+            response = lockerClient.get('/',verify=False)
+            print(response.text)
+            #self.clearLabel()
+            logging.info('LOCKERAPI:SEND,' + ' completed')
+        else:
+            logging.info('POS:RECEIVEDATA, Could not verify the channel of input data.')
 
     def clearLabel(self):
         win = globals()['ex'] #ex
@@ -141,6 +146,31 @@ class Server(QtCore.QObject):
             print("TCP Server couldn't wake up")
 
 ############### GUI #################
+def on_export_clicked():
+    alert = QMessageBox()
+    alert.setWindowTitle('Meesage')
+    alert.setText('Exporting log file is done!')
+
+    win = globals()['ex']
+    #print(win.logTextBox.widget)
+    #print(win.logTextBox.export())
+
+    filename = QFileDialog.getSaveFileName(win, 'Save Log', '',
+                                             "Text Files (*.txt);;All Files (*)", 
+                                             options=QFileDialog.DontUseNativeDialog)
+    if filename == '':
+       print("No file") 
+    else:
+       #print(filename)
+       if filename[1] == 'Text Files (*.txt)' and filename[0][-4:] != '.txt':
+           filename = filename[0] + '.txt'
+       else:
+           filename = filename[0]
+       with open(filename, 'w') as fp:
+            fp.writelines(win.logTextBox.export()) 
+            alert.exec()
+    
+
 class QTextEditLogger(logging.Handler):
     def __init__(self, parent):
         super().__init__()
@@ -150,6 +180,9 @@ class QTextEditLogger(logging.Handler):
     def emit(self, record):
         msg = self.format(record)
         self.widget.appendPlainText(msg)
+    
+    def export(self):
+        return self.widget.toPlainText()
 
 class MainUI(QMainWindow):
     def __init__(self):
@@ -164,7 +197,7 @@ class MainUI(QMainWindow):
         # You can format what is printed to text box
         self.logTextBox = QTextEditLogger(self)
         #self.logTextBox.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-        self.logTextBox.setFormatter(logging.Formatter('%(asctime)s | %(levelname)s | %(message)s'))
+        self.logTextBox.setFormatter(logging.Formatter('%(asctime)s | %(message)s'))
         logging.getLogger().addHandler(self.logTextBox)
         # You can control the logging level
         logging.getLogger().setLevel(logging.INFO)
@@ -181,6 +214,9 @@ class MainUI(QMainWindow):
         #self.cw.setLayout(self.formlayout)
         self.mainWidget.setLayout(self.mainLayout)
         self.setCentralWidget(self.mainWidget)
+
+        logging.info('MinorPrintServer has started.')
+        logging.info('Waiting on next order ...')
         
 
         # self.uiConnect = QPushButton("Connect")
@@ -237,6 +273,7 @@ class MainUI(QMainWindow):
         layout.addStretch(1)
         self.topLeftGroupBox.setLayout(layout)   
 
+
     def createTopRightGroupBox(self):
         # self.statusLayout = QGridLayout()
         # self.statusLayout.addWidget(self.topLeftGroupBox, 1, 0)
@@ -247,6 +284,7 @@ class MainUI(QMainWindow):
         self.flatPushButton = QPushButton("Export")
         #flatPushButton = QPushButton(self.get_tray_icon(),"loadme")
         #self.flatPushButton.setFlat(True)
+        self.flatPushButton.clicked.connect(on_export_clicked)
 
         layout = QVBoxLayout()
         layout.addWidget(self.logTextBox.widget)
