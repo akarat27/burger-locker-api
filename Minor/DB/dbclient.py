@@ -6,6 +6,7 @@ def initConnect():
     #print(con)
     return con
 
+#### DDL for Create ####
 def createTable():
     con = initConnect();
     with con:
@@ -29,12 +30,29 @@ def createTableKey():
                 encrypted TEXT
             );
         """)
+def createTableRequest():
+    con = initConnect();
+    with con:
+        con.execute("""
+           CREATE TABLE REQUEST (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            requestDate TEXT,
+            orderNo TEXT,
+            sdmOrder TEXT,
+            requestData TEXT,
+            responseData TEXT,
+            status INTEGER
+           );
+        """)
+
+##### KEY MANAGEMENT ######
 def createKey(input):
     con = initConnect();
     sql = 'INSERT INTO KEY ( encrypted) values( \''+input+'\')'
     data = []
     with con:
         con.execute(sql)
+        
 def clearKey():
     con = initConnect();
     sql = 'DELETE FROM KEY'
@@ -50,6 +68,7 @@ def getKey():
         rows = cur.fetchall()
         return rows
 
+##### LOCKER MANAGEMENT ######
 def createLocker(input):
     con = initConnect();
     sql = 'INSERT INTO LOCKER ( reserveDate, orderNo, sdmOrder, lockerNo, status) values(?, ?, ? ,? ,?)'
@@ -61,6 +80,7 @@ def createLocker(input):
     # ]
     with con:
         con.executemany(sql, data)
+        con.commit()
 
 def clearLockerOfYesterday():
     con = initConnect();
@@ -72,3 +92,29 @@ def clearLockerOfYesterday():
     data = [(current_time)]
     with con:
         con.execute(sql)
+        con.commit()
+
+##### REQUEST MANAGEMENT ######
+def createRequest(input):
+    con = initConnect();
+    cur = con.cursor()
+    sql = 'INSERT INTO REQUEST ( requestDate, orderNo, sdmOrder, requestData) values(?, ?, ? ,? ,?)'
+    data = [input]
+    with con:
+        con.executemany(sql, data)
+        con.commit()
+        return cur.lastrowid
+
+def updateResponse(input,rowid):
+    con = initConnect();
+    sql = 'UPDATE REQUEST set responseData = \''+ input[0] +'\' , status = \''+ input[1] +'\' where id = \''+ rowid +'\' '
+    with con:
+        con.execute(sql)
+
+# def updateResponse(input,sdm):
+#     con = initConnect();
+#     sql = 'UPDATE REQUEST set responseData = \''+ input[0] +'\' , status = \''+ input[1] +'\' where orderNo = \''+ input[2] +'\' and sdmOrder = \''+ sdm +'\' '
+#     if sdm == '':
+#          sql = 'UPDATE REQUEST set responseData = \''+ input[0] +'\' , status = \''+ input[1] +'\' where orderNo = \''+ input[2] +'\' '
+#     with con:
+#         con.execute(sql)
