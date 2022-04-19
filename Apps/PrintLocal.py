@@ -593,7 +593,8 @@ class PrintLocal():
                         status_string = job_status_string(value)
                         value = '%#010x (%s)' % (value, status_string)
                     if key == 'job_submitted':
-                        print('[%08x] %s: %s' % (job_id, key, value))
+                        pass
+                        #print('[%08x] %s: %s' % (job_id, key, value))
                     time.sleep(.05)
 
                 # print('Event found for print out ...')

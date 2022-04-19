@@ -67,17 +67,19 @@ class Client(QtCore.QObject):
         self.socket.connected.connect(self.on_connected)
         self.socket.disconnected.connect(self.on_connected)
         self.socket.readyRead.connect(self.on_readyRead)
-        print(
-            "Client Connected from IP %s" % self.socket.peerAddress().toString()
-        )
+        # print(
+        #     "Client Connected from IP %s" % self.socket.peerAddress().toString()
+        # )
 
     def on_connected(self):
-        print("Client Connected Event")
+        pass 
+        #print("Client Connected Event")
         # win = globals()['ex'] #ex
         # win.setProgramStatus("State : Found a new order.")
 
     def on_disconnected(self):
-        print("Client Disconnected")
+        pass
+        #print("Client Disconnected")
         # win = globals()['ex'] #ex
         # win.setProgramStatus("State : Waiting for the next order.")
 
@@ -103,9 +105,11 @@ class Client(QtCore.QObject):
             win.setTranTime(capture['datetime'])
             logging.info('POS:RECEIVEDATA,'+ ' Channel ' + capture['channel'] + ',' + capture['order'] + ',' + capture['sdm']  )
 
-            #make locker for request
+            #make locker for request access token
             response = lockerClient.get('/',verify=False)
             print(response.text)
+
+
             #self.clearLabel()
             logging.info('LOCKERAPI:SEND,' + ' completed')
         else:
@@ -129,7 +133,7 @@ class Server(QtCore.QObject):
 
     def on_newConnection(self):
         while self.server.hasPendingConnections():
-            print("Incoming Connection...")
+            #print("Incoming Connection...")
             self.client = Client(self)
             self.client.SetSocket(self.server.nextPendingConnection())
 
@@ -378,41 +382,55 @@ def decrypt(token: bytes, key: bytes) -> bytes:
     return Fernet(key).decrypt(token)
 
 if __name__ == "__main__":
-    
+    app = QApplication(sys.argv)
     #CHECKING THE KEY BEFORE STARTUP
     key = "TLUKyqJD58LnXv286GeYVwQIHgnbeHUK_Xs9lA93FGA="
     rows = dbclient.getKey()
     encryted_uuid = rows[0][0]  #print(rows[0][0])
+    #print(encryted_uuid)
+    #print(bytes.fromhex(encryted_uuid))
     errorToken = ''
     try:
         decrypted_uuid = decrypt(bytes.fromhex(encryted_uuid),key).decode()
         hwid = str(subprocess.check_output('wmic csproduct get uuid')).split('\\r\\n')[1].strip('\\r').strip()
+        #print(decrypted_uuid)
+        #print(hwid)
         if hwid != decrypted_uuid:
-            print(errorToken + 'Key installed is invalid for MINOR')
+            #print(errorToken + 'Key installed is invalid for MINOR')
+            alert = QMessageBox()
+            alert.setWindowTitle('License')
+            alert.setText(errorToken + ' Key installed is invalid for MINOR')
+            alert.exec()
             sys.exit()
         else:
             pass
-            # print(decrypted_uuid)
-            # print(hwid)
     except ValueError:
-        errorToken = 'InvalidToken'
-        print(errorToken + '.Key installed is invalid for MINOR')
+        errorToken = 'InvalidToken[ValueError]'
+        #print(errorToken + '.Key installed is invalid for MINOR')
+        alert = QMessageBox()
+        alert.setWindowTitle('License')
+        alert.setText(errorToken + ', Key installed is invalid for MINOR')
+        alert.exec()
         sys.exit()
     except InvalidToken:
         errorToken = 'InvalidToken'
-        print(errorToken + '.Key installed is invalid for MINOR')
+        #print(errorToken + '.Key installed is invalid for MINOR')
+        alert = QMessageBox()
+        alert.setWindowTitle('License')
+        alert.setText(errorToken + ', Key installed is invalid for MINOR')
+        alert.exec()
         sys.exit()
 
     #STARTING TREAD
     t1 = thread_with_exception('Thread PrintJOB') #Thread 1
     t1.start()
+    time.sleep(2)
 
-    app = QApplication(sys.argv)
+    #app = QApplication(sys.argv)
     ex = MainUI()
     ex.show()
     ex.setup() # to start server ,PORT 7011
     app.exec_()
-
 
     time.sleep(2)
     t1.raise_exception()
